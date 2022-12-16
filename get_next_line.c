@@ -6,7 +6,7 @@
 /*   By: mikhalil <marvin@codam.nl>                   +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2022/11/16 15:54:09 by mikhalil      #+#    #+#                 */
-/*   Updated: 2022/12/06 19:42:24 by mikhalil      ########   odam.nl         */
+/*   Updated: 2022/12/16 18:33:12 by mikhalil      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@
 #include <fcntl.h>
 #include "get_next_line.h"
 
-int	check_buf(char* buf, int k)
+/*int	check_buf(char* buf, int k)
 {
 	int	i;
 
@@ -60,7 +60,7 @@ char	*get_next_line(int fd)
 	i = 0;
 	if (a)
 	{
-		beg = calloc((a + 1), sizeof(void));
+		beg = calloc((a + 1), sizeof(void));             // calloc is not aloud (i think)
 		j = read(fd, beg, a + 1);
 		printf("beg = %s\n", beg);
 		free(beg);
@@ -73,17 +73,17 @@ char	*get_next_line(int fd)
 		buf = calloc(BUFFER_SIZE, sizeof(void));
 		beg = calloc(BUFFER_SIZE * i, sizeof(void));
 		cpy(out, beg, BUFFER_SIZE * i);
-		/*if (out)
-			free(out);*/
+		//if (out)
+		//	free(out);
 		out = calloc(BUFFER_SIZE * (i + 1), sizeof(void));
 		cpy(beg, out, BUFFER_SIZE * i);
-	/*	if (!buf || !beg || !out)
-		{
-			free(buf);
-			free(beg);
-			free(out);
-			return ("");
-		}*/
+		//if (!buf || !beg || !out)
+		//{
+		//	free(buf);
+		//	free(beg);
+		//	free(out);
+		//	return ("");
+		//}
 		k = read(fd, buf, BUFFER_SIZE);
 		if (k == -1)
 			return ("");
@@ -104,6 +104,35 @@ char	*get_next_line(int fd)
 		i++;
 	}
 	return ("");
+}*/
+
+#include <string.h>
+
+char	*get_next_line(int fd)
+{
+	int		i = 0;
+	//const int a = 0;
+	char	*buf = NULL, *out = NULL, *temp = NULL;
+	buf = calloc(1, sizeof(void));
+	//buf[0] = '\n';
+	//printf("buf[0] = %d\n", buf[0]);
+	//read(fd, buf, 1);
+	//printf("%c\n", buf[0]);
+	while (buf[0] != '\n')
+	{
+		/*temp = calloc(i, sizeof(void));
+		strcpy(temp, out);
+		out = calloc(i + 1, sizeof(void));
+		strcpy(out, temp);*/
+		read(fd, buf, 1);                         // instead of 1 should be buffer size later, lol
+		//if (buf[0] == '\n')
+		//	break;
+		//strcat(out, buf);
+		printf("buf[0] = %c\n", buf[0]);
+		//printf("temp = %s, buf = %s, out = %s", temp, buf, out);
+		i++;
+	}
+	return buf;
 }
 
 int main()
@@ -115,13 +144,9 @@ int main()
 	int k;
 
 	fd = open("test_file", O_RDONLY);
-	
-	printf("out1 = %s\n", get_next_line(fd));
-	printf("out2 = %s\n", get_next_line(fd));
-	printf("out3 = %s\n", get_next_line(fd));
-	//printf("%s\n", get_next_line(fd));
-	//printf("%s\n", get_next_line(fd));
-	//printf("%s\n", get_next_line(fd));
+
+	for (int i = 1; i <= 3; i++)
+		printf("out%d = %s\n", i, get_next_line(fd));
 	
 	close(fd);
 	//printf("\n%d\n", BUFFER_SIZE);
