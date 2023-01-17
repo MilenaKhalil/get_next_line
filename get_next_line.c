@@ -108,46 +108,143 @@ char	*get_next_line(int fd)
 
 #include <string.h>
 
+int     size(char *str)
+{
+    int i;
+
+    if (!str)
+        return (-1);
+    i = 0;
+    while (str[i++]);
+    return (i - 1);
+}
+
+void    str_cpy(char *dest, char *sour)
+{
+    int i;
+
+    i = 0;
+    if (!dest || !sour)
+        return ;
+    while (sour[i] != 0)
+    {
+        dest[i] = sour[i];
+        i++;
+    }
+    dest[i] = 0;
+}
+
+char    *str_join(char *out, char *buf)
+{
+    char    *output;
+    int     i;
+    int     j;
+
+    if (!buf && !out)
+        return (0);
+    if (!out && buf)
+    {
+        output = malloc(size(buf));
+        str_cpy(output, buf);
+        return (output);
+    }
+    output = malloc(size(out) + size(buf) + 1);
+    i = 0;
+    while (out[i] != 0)
+    {
+        output[i] = out[i];
+        i++;
+    }
+    if (!buf)
+        return (output);
+    j = 0;
+    while (buf[j] != 0)
+    {
+        output[j + i] = buf[j];
+        j++;
+    }
+    output[j + i] = 0;
+    return (output);
+}
+
+int     check_buf(char *buf)
+{
+    int i;
+
+    i = 0;
+    while (buf[i] != 0)
+    {
+        if (buf[i] == '\n')
+            break ;
+        i++;
+    }
+    return (i);
+}
+
+void    save_str(char *save, char *str)
+{
+    int i;
+
+    i = 0;
+    //save = malloc(size(str));
+    while (str[i] != 0)
+    {
+        *(save + i) = str[i];
+        i++;
+    }
+    *(save + i) = 0;
+}
+
 char	*get_next_line(int fd)
 {
-	int		i = 0;
-	//const int a = 0;
-	char	*buf = NULL, *out = NULL, *temp = NULL;
-	buf = calloc(1, sizeof(void));
-	//buf[0] = '\n';
-	//printf("buf[0] = %d\n", buf[0]);
-	//read(fd, buf, 1);
-	//printf("%c\n", buf[0]);
-	while (buf[0] != '\n')
+    int     k, check;
+	static int  a = 0;
+    int     bufsize = 4;
+	char	*buf = NULL;
+    static char    *save_buf = NULL;
+    char    *out = NULL, *temp = NULL;
+
+	buf = calloc(bufsize + 1, 1);              // потом уберём
+	while (read(fd, buf, bufsize))              // она должна тоже входить если есть буфер
 	{
-		/*temp = calloc(i, sizeof(void));
-		strcpy(temp, out);
-		out = calloc(i + 1, sizeof(void));
-		strcpy(out, temp);*/
-		read(fd, buf, 1);                         // instead of 1 should be buffer size later, lol
-		//if (buf[0] == '\n')
-		//	break;
-		//strcat(out, buf);
-		printf("buf[0] = %c\n", buf[0]);
-		//printf("temp = %s, buf = %s, out = %s", temp, buf, out);
-		i++;
+        //printf("buf = %s, out = %s, temp = %s\n", buf, out, temp);
+        printf("save_buf = %s\n", save_buf);
+        if (out)
+		    temp = malloc(size(out));
+		str_cpy(temp, out);
+        check = size(buf);
+        buf[check] = 0;
+        out = str_join(temp, buf);
+        k = check_buf(buf);
+        if (k < bufsize)
+        {
+            if (temp)
+                out[size(temp) + k] = 0;
+            else
+                out[k] = 0;
+            save_buf = malloc(size(buf + k + 1));
+            save_str(save_buf, buf + k + 1);
+            break ;
+        }
+        //printf("buf = %s, out = %s, temp = %s\n", buf, out, temp);
 	}
-	return buf;
+    if (!out)
+        return ("");
+	return (out);
 }
 
 int main()
 {
-	FILE* ptr;
 	int fd;
-	char ch;                                                                     // there should be a defolt value
-	char *str1, *str2;
 	int k;
 
 	fd = open("test_file", O_RDONLY);
 
-	for (int i = 1; i <= 3; i++)
+	for (int i = 1; i <= 10; i++)
 		printf("out%d = %s\n", i, get_next_line(fd));
-	
+	char    *temp = NULL;
+    //printf("sj1 = %s\n", str_join(str_join(temp, "a"), "b"));
+
 	close(fd);
 	//printf("\n%d\n", BUFFER_SIZE);
 	return 0;
