@@ -18,102 +18,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "get_next_line.h"
-
-/*int	check_buf(char* buf, int k)
-{
-	int	i;
-
-	i = 0;
-	while (i <= k)
-	{
-		if (buf[i] == '\n')
-			return (i);
-		i++;
-	}
-	return (k);
-}
-
-void	cpy(char *src, char *dst, int len)
-{
-	if (!src || !dst || !len)
-		return ;
-	while (len--)
-		dst[len] = src[len];
-}
-
-int	join(char *src, char *dst, int i, int len)
-{
-	if (!len || !src || !dst)
-		return (0);
-	while (len--)
-		dst[i + len] = src[len];
-	return (i + len);
-}
-
-char	*get_next_line(int fd)
-{
-	static int	a = 0;                                    // should be 0, but I am experimenting..
-	char*		buf, *out, *beg;
-	int			k, j, i;
-
-	printf("a = %d\n", a);
-	i = 0;
-	if (a)
-	{
-		beg = calloc((a + 1), sizeof(void));             // calloc is not aloud (i think)
-		j = read(fd, beg, a + 1);
-		printf("beg = %s\n", beg);
-		free(beg);
-		if (j == -1)
-			return ("");
-	}
-	//printf("aaaaaaaaaaaa");
-	while (1)
-	{
-		buf = calloc(BUFFER_SIZE, sizeof(void));
-		beg = calloc(BUFFER_SIZE * i, sizeof(void));
-		cpy(out, beg, BUFFER_SIZE * i);
-		//if (out)
-		//	free(out);
-		out = calloc(BUFFER_SIZE * (i + 1), sizeof(void));
-		cpy(beg, out, BUFFER_SIZE * i);
-		//if (!buf || !beg || !out)
-		//{
-		//	free(buf);
-		//	free(beg);
-		//	free(out);
-		//	return ("");
-		//}
-		k = read(fd, buf, BUFFER_SIZE);
-		if (k == -1)
-			return ("");
-		j = check_buf(buf, k);
-		printf("buf = %s\n", buf);
-		if (k < BUFFER_SIZE || j < k)
-		{
-			printf("j = %d\n", j);
-			a += BUFFER_SIZE * i + j + 1;
-			join(buf, out, BUFFER_SIZE * i, j);
-			free(buf);
-			free(beg);
-			//printf("out = %s\n", out);
-			return (out);
-		}
-		free(buf);
-		free(beg);
-		i++;
-	}
-	return ("");
-}*/
-
 #include <string.h>
 
-int     size(char *str)
+int     size(char *str)             // вроде работает6 но выглядит пипец подозрительно
 {
     int i;
 
     if (!str)
-        return (-1);
+        return (0);
+    //    return (-1);                // мы вообще этот выход используем? Почему -1 то?
     i = 0;
     while (str[i++]);
     return (i - 1);
@@ -134,7 +47,7 @@ void    str_cpy(char *dest, char *sour)
     dest[i] = 0;
 }
 
-char    *str_join(char *out, char *buf)
+char    *str_join(char *out, char *buf, int k)         // копирует до определённого числа!!
 {
     char    *output;
     int     i;
@@ -144,21 +57,22 @@ char    *str_join(char *out, char *buf)
         return (0);
     if (!out && buf)
     {
-        output = malloc(size(buf));
+        output = malloc(size(buf) + 1);          // вроде так
         str_cpy(output, buf);
         return (output);
     }
-    output = malloc(size(out) + size(buf) + 1);
+    output = malloc(size(out) + k + 1);
     i = 0;
     while (out[i] != 0)
     {
         output[i] = out[i];
         i++;
     }
+    output[i] = 0;                               // по идее если баф не 0, он переобозначится
     if (!buf)
         return (output);
     j = 0;
-    while (buf[j] != 0)
+    while (j < k)
     {
         output[j + i] = buf[j];
         j++;
@@ -167,7 +81,7 @@ char    *str_join(char *out, char *buf)
     return (output);
 }
 
-int     check_buf(char *buf)
+int     check_buf(char *buf)    // Итак, у нас может быть 2 вида информации: размер буфера и вывод                                   этой функции. Если выход меньше размера, то там есть \n, если                                     размер меньше, чем баф сайз, там конец файла. Всё просто
 {
     int i;
 
@@ -181,12 +95,11 @@ int     check_buf(char *buf)
     return (i);
 }
 
-void    save_str(char *save, char *str)
+void    save_str(char *save, char *str)  // спасает ваши стринги (точнее одни стринги)
 {
     int i;
 
     i = 0;
-    //save = malloc(size(str));
     while (str[i] != 0)
     {
         *(save + i) = str[i];
@@ -199,34 +112,43 @@ char	*get_next_line(int fd)
 {
     int     k, check;
 	static int  a = 0;
-    int     bufsize = 4;
+    int     bufsize = 4;                     // потом будет извне
 	char	*buf = NULL;
     static char    *save_buf = NULL;
-    char    *out = NULL, *temp = NULL;
+    char    *out = NULL, *temp = NULL, *temp_buf = NULL;
 
-	buf = calloc(bufsize + 1, 1);              // потом уберём
+	buf = calloc(bufsize + 1, 1);               // каллок, потому что нулевой размер в начале
+    printf("save_buf = %s\n", save_buf);
 	while (read(fd, buf, bufsize))              // она должна тоже входить если есть буфер
 	{
+        if (save_buf)
+        {
+            //printf("save_buf = %s, buf = %s\n", save_buf, buf);
+            buf = str_join(save_buf, buf, size(buf));
+        }
         //printf("buf = %s, out = %s, temp = %s\n", buf, out, temp);
-        printf("save_buf = %s\n", save_buf);
-        if (out)
+        if (temp)
+            free(temp);
+        if (out)                                // не первый проход
 		    temp = malloc(size(out));
-		str_cpy(temp, out);
+		str_cpy(temp, out);                     // сохраняем аут
         check = size(buf);
-        buf[check] = 0;
-        out = str_join(temp, buf);
+        buf[check] = 0;                         // зачем это?
+        if (out)
+            free(out);
         k = check_buf(buf);
+        out = str_join(temp, buf, k);
         if (k < bufsize)
         {
-            if (temp)
-                out[size(temp) + k] = 0;
-            else
-                out[k] = 0;
+            out[size(temp) + k] = 0;
             save_buf = malloc(size(buf + k + 1));
             save_str(save_buf, buf + k + 1);
             break ;
         }
-        //printf("buf = %s, out = %s, temp = %s\n", buf, out, temp);
+        /*if (buf)
+        {
+            free(buf);
+        }*/
 	}
     if (!out)
         return ("");
@@ -240,11 +162,9 @@ int main()
 
 	fd = open("test_file", O_RDONLY);
 
-	for (int i = 1; i <= 10; i++)
+	for (int i = 1; i <= 20; i++)
 		printf("out%d = %s\n", i, get_next_line(fd));
-	char    *temp = NULL;
-    //printf("sj1 = %s\n", str_join(str_join(temp, "a"), "b"));
-
+	//char    *temp = NULL;
 	close(fd);
 	//printf("\n%d\n", BUFFER_SIZE);
 	return 0;
