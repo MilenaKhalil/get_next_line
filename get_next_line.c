@@ -111,14 +111,13 @@ void    save_str(char *save, char *str)  // спасает ваши стринг
 char	*get_next_line(int fd)
 {
     int     k, check;
-	static int  a = 0;
-    int     bufsize = 4;                     // потом будет извне
+    int     bufsize = 2;                     // проверить  на 1
 	char	*buf = NULL;
     static char    *save_buf = NULL;
     char    *out = NULL, *temp = NULL, *temp_buf = NULL;
 
 	buf = calloc(bufsize + 1, 1);               // каллок, потому что нулевой размер в начале
-    printf("save_buf = %s\n", save_buf);
+    //printf("save_buf = %s\n", save_buf);
 	while (read(fd, buf, bufsize))              // она должна тоже входить если есть буфер
 	{
         if (save_buf)
@@ -130,12 +129,9 @@ char	*get_next_line(int fd)
         if (temp)
             free(temp);
         if (out)                                // не первый проход
-		    temp = malloc(size(out));
+		    temp = malloc(size(out) + 1);
 		str_cpy(temp, out);                     // сохраняем аут
         check = size(buf);
-        buf[check] = 0;                         // зачем это?
-        if (out)
-            free(out);
         k = check_buf(buf);
         out = str_join(temp, buf, k);
         if (k < bufsize)
@@ -145,10 +141,6 @@ char	*get_next_line(int fd)
             save_str(save_buf, buf + k + 1);
             break ;
         }
-        /*if (buf)
-        {
-            free(buf);
-        }*/
 	}
     if (!out)
         return ("");
