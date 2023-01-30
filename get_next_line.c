@@ -6,128 +6,111 @@
 /*   By: mikhalil <marvin@codam.nl>                   +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2022/11/16 15:54:09 by mikhalil      #+#    #+#                 */
-/*   Updated: 2023/01/25 17:49:18 by dkocob        ########   odam.nl         */
+/*   Updated: 2023/01/29 17:30:35 by mikhalil      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include "get_next_line.h"
-#include <string.h>
 
-int     str_len(char *str, char c)             // вроде работает6 но выглядит пипец подозрительно
+void	prop_free(char **str)
 {
-    int i;
-
-    i = 0;
-    while (str && str[i] != c && str[i])
-        i++;
-    return (i);
+	if (*str)
+		free(*str);
+	*str = NULL;
 }
 
-void    str_cpy(char *dest, char *sour)
+char	*free_all(char **out, char **buf, char **save_buf)
 {
-    int i;
-
-    i = 0;
-    if (!dest || !sour)
-        return ;
-    while (sour[i] != 0)
-    {
-        dest[i] = sour[i];
-        i++;
-    }
-    dest[i] = 0;
+	if (out)
+		prop_free(out);
+	if (buf)
+		prop_free(buf);
+	if (save_buf)
+		prop_free(save_buf);
+	return (NULL);
 }
 
-char    *str_join(char *out, char *buf, int k)         // копирует до определённого числа!!
+int	remake(char **out, char *buf, int k, int param)
 {
-    char    *output;
-    int     i;
-    int     j;
+	char	*temp;
+	int		i;
 
-    if (!buf && !out)
-        return (0);
-    if (!out && buf)
-    {
-        output = malloc(str_len(buf, '\0') + 1);
-        str_cpy(output, buf);
-        return (output);
-    }
-    output = malloc(str_len(out, '\0') + k + 1);
-    i = 0;
-    while (out[i] != 0)
-    {
-        output[i] = out[i];
-        i++;
-    }
-    j = 0;
-    while (buf && buf[j] && j < k)
-    {
-        output[j + i] = buf[j];
-        j++;
-    }
-    output[j + i] = 0;
-    return (output);
+	i = 1;
+	if (!param || !(*out))
+	{
+		temp = str_join(NULL, buf, str_len(buf, '\0'));
+		if (!temp && buf)
+			return (0);
+		prop_free(out);
+		if (k)
+			*out = str_join(NULL, temp, k);
+		if (!(*out) && k)
+			i = 0;
+	}
+	else
+	{
+		temp = str_join(NULL, *out, str_len(*out, '\0'));
+		prop_free(out);
+		*out = str_join(temp, buf, k);
+		if (!(*out) || !temp)
+			i = 0;
+	}
+	prop_free(&temp);
+	return (i);
+}
+
+char	*gnl(int fd, char **buf, char **out, char **save)
+{
+	int	check;
+	int	k;
+
+	while (1)
+	{
+		fill(*buf, BUFFER_SIZE + 1);
+		check = read(fd, *buf, BUFFER_SIZE);
+		if (check == -1)
+			return (free_all(out, buf, save));
+		if (!check)
+			break ;
+		k = str_len(*buf, '\n');
+		if (k == str_len(*buf, '\0') && !remake(out, *buf, k, 1))
+			return (free_all(out, buf, save));
+		else if (k < str_len(*buf, '\0'))
+		{
+			if (!remake(out, *buf, k + 1, 1)
+				|| !remake(save, *buf + k + 1, check - k - 1, 0))
+				free_all(out, buf, save);
+			break ;
+		}
+	}
+	prop_free(buf);
+	return (*out);
 }
 
 char	*get_next_line(int fd)
 {
-    int     k, check;
-    int     bufsize = 2000;
-	char	*buf = NULL;
-    static char    *save_buf = NULL;
-    char    *out = NULL, *temp = NULL, *temp_buf = NULL;
+	char		*buf;
+	static char	*save = NULL;
+	char		*out;
 
-	buf = calloc(bufsize + 1, 1);               // каллок, потому что нулевой размер в начале
-    printf("save_buf = %s\n", save_buf);
-	while (read(fd, buf, bufsize))              // она должна тоже входить если есть буфер
+	out = NULL;
+	if (save && str_len(save, '\n') != str_len(save, '\0'))
 	{
-        if (save_buf)
-        {
-            //printf("save_buf = %s, buf = %s\n", save_buf, buf);
-            buf = str_join(save_buf, buf, str_len(buf, '\0'));
-            printf("buf = %s\n", buf);
-        }
-        if (temp)
-            free(temp);
-        if (out)                                // не первый проход
-		    temp = malloc(str_len(out, '\0') + 1);
-		str_cpy(temp, out);                     // сохраняем аут
-        check = str_len(buf, '\0');
-        k = str_len(buf, '\n');
-        out = str_join(temp, buf, k);
-        if (k < bufsize)
-        {
-            out[str_len(temp, '\0') + k] = 0;
-            save_buf = malloc(str_len(buf + k + 1, '\0'));
-            str_cpy(save_buf, buf + k + 1);
-            break ;
-        }
+		out = str_join(NULL, save, str_len(save, '\n') + 1);
+		if (!remake(&save, save + str_len(save, '\n') + 1,
+				str_len(save, '\0') - str_len(save, '\n') - 1, 0) || !out)
+			return (free_all(&out, NULL, &save));
+		return (out);
 	}
-    if (!out)
-        return ("");
-	return (out);
-}
-
-int main()
-{
-	int fd;
-	int k;
-
-	fd = open("test_file", O_RDONLY);
-
-    //printf("%d\n", str_len("", 'a'));
-    //printf("%s\n", str_join("abcdef", "0123", str_len("\n01\n23", '\n')));
-	for (int i = 1; i <= 11; i++)
-		printf("out%d = %s\n", i, get_next_line(fd));
-	//char    *temp = NULL;
-	close(fd);
-	//printf("\n%d\n", BUFFER_SIZE);
-	return 0;
+	else if (save)
+	{
+		out = str_join(NULL, save, str_len(save, '\0'));
+		prop_free(&save);
+		if (!out)
+			return (free_all(&out, NULL, &save));
+	}
+	buf = malloc(BUFFER_SIZE + 1);
+	if (!buf)
+		return (free_all(&out, &buf, &save));
+	return (gnl(fd, &buf, &out, &save));
 }
